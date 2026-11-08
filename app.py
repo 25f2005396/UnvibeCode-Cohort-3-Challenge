@@ -2,6 +2,7 @@
 
 import argparse
 import csv
+import math
 from datetime import date
 from pathlib import Path
 
@@ -12,30 +13,38 @@ FIELDS = ["date", "category", "description", "amount"]
 def load_expenses():
     if not DATA_FILE.exists():
         return []
+
     with DATA_FILE.open(newline="", encoding="utf-8") as file:
         return list(csv.DictReader(file))
 
 
 def add_expense(category, description, amount):
-    if amount <= 0:
-        raise ValueError("Amount must be greater than zero.")
+    if not math.isfinite(amount) or amount <= 0:
+        raise ValueError("Amount must be a finite number greater than zero.")
 
     new_file = not DATA_FILE.exists()
+
     with DATA_FILE.open("a", newline="", encoding="utf-8") as file:
         writer = csv.DictWriter(file, fieldnames=FIELDS)
+
         if new_file:
             writer.writeheader()
-        writer.writerow({
-            "date": date.today().isoformat(),
-            "category": category,
-            "description": description,
-            "amount": f"{amount:.2f}",
-        })
+
+        writer.writerow(
+            {
+                "date": date.today().isoformat(),
+                "category": category,
+                "description": description,
+                "amount": f"{amount:.2f}",
+            }
+        )
+
     print("Expense saved.")
 
 
 def list_expenses():
     expenses = load_expenses()
+
     if not expenses:
         print("No expenses recorded yet.")
         return
@@ -49,6 +58,7 @@ def list_expenses():
 
 def show_summary():
     totals = {}
+
     for item in load_expenses():
         category = item["category"]
         totals[category] = totals.get(category, 0) + float(item["amount"])
@@ -58,6 +68,7 @@ def show_summary():
         return
 
     print("Spending by category:")
+
     for category, total in sorted(totals.items()):
         print(f"{category}: ₹{total:.2f}")
 
@@ -75,6 +86,7 @@ def main():
     commands.add_parser("summary", help="Show totals by category")
 
     args = parser.parse_args()
+
     if args.command == "add":
         try:
             add_expense(args.category, args.description, args.amount)
